@@ -401,15 +401,3 @@ class MCTS_Run():
 
         self.network.save_network('Network_Run{}'.format(run))
         return wr_per_run
-
-
-
-env_conf = EnvConf(size=5)
-env = BotBowlEnv(env_conf,away_agent='human') 
-env.reset()
-# env.render(feature_layers=True)
-env = RewardWrapper(env, home_reward_func=A2C_Reward())
-env.game.enable_forward_model()
-spatial_obs, non_spatial_obs, action_mask = env.get_state() 
-obs = (spatial_obs, non_spatial_obs, action_mask)
-root = Node(env,obs,1)
