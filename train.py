@@ -14,9 +14,3 @@ mcts = MCTS_Run(network)
 rewards = mcts.run_mcts(num_runs)
 
 np.save('rewards',np.array(rewards))
-
-
-# Run 1000 MCTS runs, every 10 runs test against random bot and store win rate.
-# Store total reward per mcts run
-# Save network every 50 runs
-

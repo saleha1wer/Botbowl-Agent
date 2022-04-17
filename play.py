@@ -13,66 +13,11 @@ from reward_wrapper import A2C_Reward
 from botbowl import Action, ActionChoice, ActionType,Square, BBDieResult, Skill, Formation, ProcBot
 import time
 from convert_action import short_to_normal,normal_to_short_mask
-
+from proc import MyScriptedBot
 # new playing (make botbowl agent class)
 # fix going to diff side sin diff halves
 
 np.set_printoptions(threshold=sys.maxsize)
-
-def temp():
-    total_rew = 0
-
-    for i in range(10):
-        policy_network = tf.keras.models.load_model('saved_models/Network_Run699.tf')
-        env_conf = EnvConf(size=5)
-        env = BotBowlEnv(env_conf,away_agent='random')
-        env = RewardWrapper(env, home_reward_func=A2C_Reward())
-        done = False
-        spatial_obs, non_spatial_obs, mask = env.reset()
-        steps= 0
-        env.reset() 
-        spacial = []
-        non_spacial = []
-        win_rate = []
-        turn = True
-        while not done:
-            print(env.game.active_team)
-            if turn:
-                env.render()
-                spatial_obs, non_spatial_obs, mask = env.get_state()
-                mask = normal_to_short_mask(mask)
-                shape1 = spatial_obs.shape
-                sample = [np.array(spatial_obs).reshape(1,shape1[0],shape1[1],shape1[2]),np.array([non_spatial_obs]).reshape(1,-1)]
-
-                temp = policy_network.predict(sample)
-                score = temp[0]
-                action_dis = temp[1]
-                action_dis = action_dis[0]
-                for idx, v in enumerate(mask):
-                    if v == False:
-                        action_dis[idx] = -float('inf')
-
-                act_idx = np.argmax(action_dis)
-
-                act_idx = short_to_normal(env,env.game,act_idx)
-                print(action_dis)
-                print('action', act_idx)
-                (temp, temp, temp), rew, done, temp = env.step(act_idx)
-
-
-                steps += 1
-                print('win_rate from PN', score)
-                
-                if abs(rew) > 0:
-                    total_rew = total_rew + rew
-                    print('reward',rew)
-
-                print('home: ', env.game.state.home_team.state.score)
-                print('away: ', env.game.state.away_team.state.score)
-
-    print('total_reward per game', total_rew/10)
-
-
 
 class MCTSbot(ProcBot):
     env: BotBowlEnv
@@ -222,14 +167,14 @@ class MCTSbot(ProcBot):
 
         shape1 = spatial_obs.shape
         sample = [np.array(spatial_obs).reshape(1,shape1[0],shape1[1],shape1[2]),np.array([non_spatial_obs]).reshape(1,-1)]
-        policy_network = tf.keras.models.load_model('saved_models/Network_Run225.tf')
+        policy_network = tf.keras.models.load_model('policy_network.tf')
         temp = policy_network.predict(sample)
         score = temp[0]
         action_dis = temp[1]
         action_dis = action_dis[0]
         for idx, v in enumerate(mask):
             if v == False:
-                action_dis[idx] = -float('inf')
+                action_dis[idx] = -1
             # if idx == 20 or idx == 21:
             #     action_dis[idx] = -float('inf')
 
@@ -238,7 +183,7 @@ class MCTSbot(ProcBot):
         action = self.env._compute_action(act_idx)
 
         action = action[0]
-        print(action)
+
         return action
 
     def end_game(self, game):
@@ -259,26 +204,55 @@ class MCTSbot(ProcBot):
 if __name__ == '__main__':
 
     botbowl.register_bot('mcts', MCTSbot)
+    botbowl.register_bot('scripted', MyScriptedBot)
+
     # Load configurations, rules, arena and teams
-    # config = botbowl.load_config("web.json")
-    # ruleset = botbowl.load_rule_set(config.ruleset)
-    # arena = botbowl.load_arena(config.arena)
-    # home = botbowl.load_team_by_filename("human", ruleset)
-    # away = botbowl.load_team_by_filename("human", ruleset)
-    # config.competition_mode = False
-    # config.debug_mode = False
+    config = botbowl.load_config("gym-5.json")
+    ruleset = botbowl.load_rule_set(config.ruleset)
+    arena = botbowl.load_arena(config.arena)
+    home = botbowl.load_team_by_filename("human", ruleset)
+    away = botbowl.load_team_by_filename("human", ruleset)
+    config.competition_mode = False
+    config.debug_mode = False
 
-    server.start_server(debug=True, use_reloader=False, port= 1293)
-    # Play 10 games
-    # game_times = []
-    # for i in range(10):
-    #     away_agent = botbowl.make_bot("mcts")
-    #     home_agent = botbowl.make_bot("my-random-bot")
+    # server.start_server(debug=True, use_reloader=False, port= 1293)
 
-    #     game = botbowl.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
-    #     game.config.fast_mode = True
+    # Play 15 games against random
+    game_times = []
+    scored = []
+    conceded = []
+    for i in range(15):
+        home_agent = botbowl.make_bot("mcts")
+        away_agent = botbowl.make_bot("random")
 
-    #     print("Starting game", (i+1))
-    #     game.init()
-    #     print("Game is over")
+        game = botbowl.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
+        game.config.fast_mode = True
+
+        print("Starting game", (i+1))
+        game.init()
+        print("Game is over")
+        scored.append(game.state.home_team.state.score)
+        conceded.append(game.state.away_team.state.score)
+    np.save('random_scored',scored)
+    np.save('random_conceded',conceded)
+
+    # Play 15 games against scripted 
+    game_times = []
+    scored = []
+    conceded = []
+    for i in range(15):
+        home_agent = botbowl.make_bot("mcts")
+        away_agent = botbowl.make_bot("scripted")
+
+        game = botbowl.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
+        game.config.fast_mode = True
+
+        print("Starting game", (i+1))
+        game.init()
+        print("Game is over")
+        scored.append(game.state.home_team.state.score + sum(scored))
+        conceded.append(game.state.away_team.state.score + sum(conceded))
+    np.save('scripted_scored',scored)
+    np.save('scripted_conceded',conceded)
+
 
