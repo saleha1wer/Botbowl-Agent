@@ -1,5 +1,5 @@
 
-from MCTS_new import MCTS_Run
+from MCTS import MCTS_Run
 from network import Network
 import numpy as np 
 
