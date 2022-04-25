@@ -31,13 +31,14 @@ import matplotlib.pyplot as plt
 scored = np.load('random_scored.npy',allow_pickle=True)
 conceded = np.load('random_conceded.npy',allow_pickle=True)
 
+
 X = range(len(scored))
 plt.plot(X,scored,label='Scored')
 plt.plot(X,conceded,label='Conceded')
-plt.ylabel('Number of touchdowns')
-plt.xlabel('Game')
 plt.legend()
-plt.savefig('score-random')
+plt.ylabel('Number of touchdowns')
+plt.xlabel('Games')
+# plt.savefig('score-random')
 plt.show()
 
 # VS scripted
@@ -50,6 +51,5 @@ plt.show()
 # plt.plot(X,conceded,label='Conceded')
 # plt.ylabel('Number of touchdowns')
 # plt.xlabel('Games')
-# plt.legend()
 # plt.savefig('score-scripted')
 # plt.show()
